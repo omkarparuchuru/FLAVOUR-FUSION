@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recipe Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .recipe-content {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #f1f1f1;
+            max-width: none;
+        }
+
+        .recipe-content h3 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #444;
+        }
+
+        .recipe-content blockquote {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid cyan;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #ddd;
+        }
+
+        .recipe-content ul, .recipe-content ol {
+            margin: 1.25rem 0;
+            padding-left: 2rem;
+        }
+
+        .recipe-content li {
+            margin: 0.5rem 0;
+            padding-left: 0.5rem;
+        }
+
+        .recipe-content p {
+            margin: 1.25rem 0;
+        }
+
+        .recipe-content strong {
+            font-weight: 600;
+            color: #f1f1f1;
+        }
+
+        .recipe-content h3:last-of-type+ul {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 1.5rem;
+            list-style-type: none;
+        }
+
+        .recipe-content h3:last-of-type+ul li {
+            margin: 0;
+            padding: 0;
+        }
+        .recipe-content {
+    background-color: white; /* Dark background */
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+    </style>
+</head>
+
+<body class="bg-black text-white">
+    <div x-data="{
+        query: '',
+        dietPreference: '',
+        cuisineType: '',
+        loading: false,
+        recipe: null,
+        error: null,
+        formatRecipe(text) {
+            if (!text) return '';
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                smartLists: true,
+                smartypants: true,
+                xhtml: true,
+                renderer: new marked.Renderer()
+            });
+            return marked.parse(text);
+        },
+        async getRecipe() {
+            if (!this.query.trim()) {
+                this.error = 'Please enter a recipe query';
+                return;
+            }
+            this.loading = true;
+            this.error = null;
+            this.recipe = null;
+
+            const requestData = {
+                query: this.query.trim(),
+                diet_preference: this.dietPreference || null,
+                cuisine_type: this.cuisineType || null
+            };
+
+            try {
+                const response = await fetch('/recipe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to generate recipe');
+                }
+
+                this.recipe = data;
+            } catch (error) {
+                this.error = error.message;
+            } finally {
+                this.loading = false;
+            }
+        }
+    }" class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2">AI Recipe Assistant</h1>
+            <p class="text-gray-300">Get delicious recipes with images and cooking resources</p>
+        </header>
+
+        <div class="max-w-2xl mx-auto bg-gray-900 rounded-xl shadow-lg p-8 mb-8 border border-gray-700">
+            <form @submit.prevent="getRecipe" class="space-y-6">
+                <div>
+                    <label for="query" class="block text-gray-300 font-medium mb-2">What would you like to cook?</label>
+                    <input type="text" id="query" x-model.trim="query" class="w-full p-3 bg-gray-800 text-white border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all" placeholder="e.g., Chocolate chip cookies" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label for="diet" class="block text-gray-300 font-medium mb-2">Dietary Preference</label>
+                        <select id="diet" x-model="dietPreference" class="w-full p-3 bg-gray-800 text-white border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                            <option value="">Any</option>
+                            <option value="vegetarian">Vegetarian</option>
+                            <option value="vegan">Vegan</option>
+                            <option value="gluten-free">Gluten-free</option>
+                            <option value="keto">Keto</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="cuisine" class="block text-gray-300 font-medium mb-2">Cuisine Type</label>
+                        <select id="cuisine" x-model="cuisineType" class="w-full p-3 bg-gray-800 text-white border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                            <option value="">Any</option>
+                            <option value="italian">Italian</option>
+                            <option value="mexican">Mexican</option>
+                            <option value="indian">Indian</option>
+                            <option value="chinese">Chinese</option>
+                            <option value="japanese">Japanese</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white py-3 px-6 rounded-lg hover:from-cyan-600 hover:to-purple-600 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-medium" :disabled="loading || !query.trim()">
+                    <template x-if="!loading"> <span>Create Recipe</span> </template>
+                    <template x-if="loading">
+                        <div class="flex items-center justify-center">
+                            <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Creating Your Recipe...</span>
+                        </div>
+                    </template>
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>
